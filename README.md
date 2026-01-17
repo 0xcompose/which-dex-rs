@@ -1,17 +1,32 @@
 # Which DEX
 
-Command line tool to quickly identify/verify that address is an AMM pool and which DEX it is
+Command line tool to quickly identify/verify that an address is an AMM pool and which DEX protocol it implements (via bytecode inspection).
 
-Usage Examples:
+### Usage
 
--   Identifying is account a DEX pool
--   Identifying which DEX protocol this pool implements
--   Possibly using bytecode matching to verify that pool implements protocol correctly and is not a scam
+Build and run:
 
-Potential Use cases:
+```bash
+cargo run -- analyze --rpc-url <RPC_URL> --address <0xADDRESS>
+```
 
--   Broad pools gathering and identification for quick market analysis
--   Single pool verification of relativeness to known major protocol (via having lists of protocol contract addresses from other source and identifying pool deployment validity)
+JSON output (JSON on **stdout**, human-readable summary on **stderr**):
+
+```bash
+cargo run -- analyze --rpc-url <RPC_URL> --address <0xADDRESS> --json
+```
+
+Verbose logs (debug, via `tracing`):
+
+```bash
+cargo run -- analyze --rpc-url <RPC_URL> --address <0xADDRESS> --verbose
+```
+
+### Output rules
+
+-   **Protocol (confirmed)**: if selector fingerprints match **exactly one** protocol, CLI prints a single `protocol` (e.g. `UniswapV2`) and does **not** print candidates.
+-   **Protocol (uncertain/unknown)**: if **0** or **2+** protocols match, CLI prints `protocol: Unknown` and then prints `protocol_candidates` with confidences.
+-   **EIP-1167 proxies**: if the given address is an EIP-1167 minimal proxy, CLI resolves the implementation **once** and analyzes **both** (implementation is the primary `analysis`).
 
 ## Supported Protocols
 
