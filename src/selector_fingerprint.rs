@@ -112,9 +112,18 @@ pub mod selectors {
     pub const PLUGIN: Selector = Selector::from_bytes([0xef, 0x01, 0xdf, 0x4f]); // plugin()
     pub const COMMUNITY_VAULT: Selector = Selector::from_bytes([0x53, 0xe9, 0x78, 0x68]); // communityVault()
 
-    // Algebra Integral specific
-    pub const GET_FEE: Selector = Selector::from_bytes([0xce, 0xd7, 0x27, 0x07]);
-    // getFee()
+    // Algebra Integral specific (Camelot AMM V4 / Algebra Integral 1.2-style pools)
+    //
+    // NOTE: Some sources mention getFee(), but Camelot V4 pools expose fee() and a set of
+    // Integral-specific functions like safelyGetStateOfAMM() / swapWithPaymentInAdvance().
+    pub const SAFELY_GET_STATE_OF_AMM: Selector = Selector::from_bytes([0x97, 0xce, 0x1c, 0x51]); // safelyGetStateOfAMM()
+    pub const SWAP_WITH_PAYMENT_IN_ADVANCE: Selector =
+        Selector::from_bytes([0x9e, 0x4e, 0x02, 0x27]); // swapWithPaymentInAdvance(address,address,bool,int256,uint160,bytes)
+    pub const GET_PLUGIN_FEE_PENDING: Selector = Selector::from_bytes([0xa1, 0xed, 0xed, 0x87]); // getPluginFeePending()
+    pub const GET_COMMUNITY_FEE_PENDING: Selector = Selector::from_bytes([0x7b, 0xd7, 0x80, 0x25]); // getCommunityFeePending()
+    pub const PLUGIN_CONFIG: Selector = Selector::from_bytes([0x58, 0x1a, 0x75, 0x99]); // pluginConfig()
+    pub const IS_UNLOCKED: Selector = Selector::from_bytes([0x83, 0x80, 0xed, 0xb7]);
+    // isUnlocked()
 }
 
 /// Protocol fingerprint definition
@@ -161,10 +170,18 @@ static FINGERPRINTS: &[ProtocolFingerprint] = &[
             selectors::TICK_SPACING,
             selectors::LIQUIDITY,
             selectors::PLUGIN,
-            selectors::GET_FEE,
+            selectors::SAFELY_GET_STATE_OF_AMM,
         ],
         forbidden: &[selectors::SLOT0, selectors::DATA_STORAGE_OPERATOR],
-        optional: &[selectors::COMMUNITY_VAULT],
+        optional: &[
+            selectors::COMMUNITY_VAULT,
+            selectors::SWAP_WITH_PAYMENT_IN_ADVANCE,
+            selectors::GET_PLUGIN_FEE_PENDING,
+            selectors::GET_COMMUNITY_FEE_PENDING,
+            selectors::PLUGIN_CONFIG,
+            selectors::IS_UNLOCKED,
+            selectors::FEE,
+        ],
     },
     // Algebra V1.9
     ProtocolFingerprint {
@@ -177,7 +194,7 @@ static FINGERPRINTS: &[ProtocolFingerprint] = &[
             selectors::LIQUIDITY,
             selectors::PLUGIN,
         ],
-        forbidden: &[selectors::SLOT0, selectors::GET_FEE],
+        forbidden: &[selectors::SLOT0, selectors::SAFELY_GET_STATE_OF_AMM],
         optional: &[selectors::DATA_STORAGE_OPERATOR],
     },
     // Algebra legacy v1.x (pre-plugin)
@@ -380,5 +397,21 @@ mod tests {
 
         let protocol = identify_protocol(&bytecode);
         assert_eq!(protocol, DexProtocol::AlgebraLegacyV1_9Plus);
+    }
+
+    #[test]
+    fn test_identify_algebra_integral_by_integral_specific_selector() {
+        // Minimal selectors to match Algebra Integral.
+        let mut bytecode = Vec::new();
+        bytecode.extend_from_slice(selectors::TOKEN0.as_bytes());
+        bytecode.extend_from_slice(selectors::TOKEN1.as_bytes());
+        bytecode.extend_from_slice(selectors::GLOBAL_STATE.as_bytes());
+        bytecode.extend_from_slice(selectors::TICK_SPACING.as_bytes());
+        bytecode.extend_from_slice(selectors::LIQUIDITY.as_bytes());
+        bytecode.extend_from_slice(selectors::PLUGIN.as_bytes());
+        bytecode.extend_from_slice(selectors::SAFELY_GET_STATE_OF_AMM.as_bytes());
+
+        let protocol = identify_protocol(&bytecode);
+        assert_eq!(protocol, DexProtocol::AlgebraIntegral);
     }
 }

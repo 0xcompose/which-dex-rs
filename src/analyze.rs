@@ -211,7 +211,7 @@ pub async fn analyze_address(
         plugin = selectors::PLUGIN.exists_in(&bytecode),
         fee = selectors::FEE.exists_in(&bytecode),
         slot0 = selectors::SLOT0.exists_in(&bytecode),
-        getFee = selectors::GET_FEE.exists_in(&bytecode),
+        safelyGetStateOfAMM = selectors::SAFELY_GET_STATE_OF_AMM.exists_in(&bytecode),
         "key_selector_presence"
     );
 
