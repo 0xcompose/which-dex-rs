@@ -3,9 +3,11 @@ use alloy::providers::{Provider, ProviderBuilder};
 use alloy::transports::http::reqwest::Url as AlloyUrl;
 use serde::Serialize;
 use thiserror::Error;
+use tracing::debug;
 use url::Url;
 
 use crate::bytecode_fingerprint::{extract_eip1167_impl, is_eip1167_proxy, BytecodeFingerprint};
+use crate::selector_fingerprint::selectors;
 use crate::selector_fingerprint::{identify_protocols, DexProtocol};
 
 #[derive(Debug, Error)]
@@ -100,6 +102,8 @@ fn decide_protocol(bytecode: &[u8]) -> (DexProtocol, Option<Vec<ProtocolCandidat
             .then_with(|| dex_protocol_name(a.0).cmp(dex_protocol_name(b.0)))
     });
 
+    debug!(matches = ?matches.iter().map(|(p,c)| (dex_protocol_name(*p), *c)).collect::<Vec<_>>(), "selector_fingerprint_matches");
+
     match matches.len() {
         1 => (matches[0].0, None),
         0 => (DexProtocol::Unknown, None),
@@ -160,6 +164,7 @@ async fn fetch_code(rpc_url: &str, address: Address) -> Result<Vec<u8>, AnalyzeE
         .await
         .map_err(|e| AnalyzeError::Rpc(e.to_string()))?;
 
+    debug!(address = %format!("{address:#x}"), code_size = bytes.len(), "fetched_code");
     Ok(bytes.to_vec())
 }
 
@@ -176,6 +181,11 @@ pub async fn analyze_address(
 
     let proxy_impl = proxy_implementation_address(&bytecode);
     if let Some(impl_address) = proxy_impl {
+        debug!(
+            proxy = %format!("{address:#x}"),
+            implementation = %format!("{impl_address:#x}"),
+            "eip1167_proxy_resolved"
+        );
         let impl_bytecode = fetch_code(rpc_url, impl_address).await?;
         if impl_bytecode.is_empty() {
             return Err(AnalyzeError::NoDeployedBytecode);
@@ -193,6 +203,17 @@ pub async fn analyze_address(
             proxy_analysis: Some(proxy_analysis),
         });
     }
+
+    debug!(
+        token0 = selectors::TOKEN0.exists_in(&bytecode),
+        token1 = selectors::TOKEN1.exists_in(&bytecode),
+        globalState = selectors::GLOBAL_STATE.exists_in(&bytecode),
+        plugin = selectors::PLUGIN.exists_in(&bytecode),
+        fee = selectors::FEE.exists_in(&bytecode),
+        slot0 = selectors::SLOT0.exists_in(&bytecode),
+        getFee = selectors::GET_FEE.exists_in(&bytecode),
+        "key_selector_presence"
+    );
 
     Ok(AnalyzeReport {
         rpc_url: rpc_url.to_string(),

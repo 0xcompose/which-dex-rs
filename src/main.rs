@@ -1,11 +1,7 @@
-mod analyze;
-mod bytecode_fingerprint;
-mod selector_fingerprint;
-
-use crate::analyze::{
-    analyze_address, parse_address_hex, validate_rpc_url, AnalyzeError, AnalyzeReport,
-};
 use clap::{Parser, Subcommand};
+use tracing_subscriber::EnvFilter;
+use which_dex_rs::analyze::{analyze_address, parse_address_hex, AnalyzeError, AnalyzeReport};
+use which_dex_rs::validate_rpc_url;
 
 #[derive(Debug, Parser)]
 #[command(name = "which-dex-rs", about = "DEX pool identifier", version)]
@@ -27,6 +23,9 @@ enum Commands {
         /// Emit JSON to stdout (human-readable output goes to stderr)
         #[arg(long)]
         json: bool,
+        /// Enable verbose debug logs (tracing)
+        #[arg(long)]
+        verbose: bool,
     },
 }
 
@@ -39,7 +38,8 @@ async fn main() {
             rpc_url,
             address,
             json,
-        } => run_analyze(&rpc_url, &address, json).await,
+            verbose,
+        } => run_analyze(&rpc_url, &address, json, verbose).await,
     };
 
     if let Err(e) = result {
@@ -48,7 +48,13 @@ async fn main() {
     }
 }
 
-async fn run_analyze(rpc_url: &str, address: &str, json: bool) -> Result<(), AnalyzeError> {
+async fn run_analyze(
+    rpc_url: &str,
+    address: &str,
+    json: bool,
+    verbose: bool,
+) -> Result<(), AnalyzeError> {
+    init_tracing(verbose);
     validate_rpc_url(rpc_url)?;
     let addr = parse_address_hex(address)?;
 
@@ -65,6 +71,12 @@ async fn run_analyze(rpc_url: &str, address: &str, json: bool) -> Result<(), Ana
     }
 
     Ok(())
+}
+
+fn init_tracing(verbose: bool) {
+    let level = if verbose { "debug" } else { "info" };
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
+    let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
 }
 
 fn print_human(report: &AnalyzeReport) {
