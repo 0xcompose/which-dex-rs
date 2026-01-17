@@ -16,6 +16,9 @@ url = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+[dev-dependencies]
+assert_cmd = "2"
+
 [[example]]
 name = "tlsh_compare"
 path = "examples/tlsh_compare.rs"
