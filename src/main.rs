@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
 use tracing_subscriber::EnvFilter;
-use which_dex_rs::analyze::{analyze_address, parse_address_hex, AnalyzeError, AnalyzeReport};
-use which_dex_rs::validate_rpc_url;
+use which_dex::analyze::{analyze_address, parse_address_hex, AnalyzeError, AnalyzeReport};
+use which_dex::validate_rpc_url;
 
 #[derive(Debug, Parser)]
-#[command(name = "which-dex-rs", about = "DEX pool identifier", version)]
+#[command(name = "which-dex", about = "DEX pool identifier", version)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
