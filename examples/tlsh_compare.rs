@@ -10,7 +10,7 @@
 
 use std::env;
 use std::fs;
-use which_dex_rs::{Fingerprint, Similarity};
+use which_dex_rs::{BytecodeFingerprint, Similarity};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -42,16 +42,18 @@ fn main() {
     println!("Bytecode 1: {} bytes", bytecode1.len());
     println!("Bytecode 2: {} bytes", bytecode2.len());
 
-    let fp1 = Fingerprint::from_bytecode(&bytecode1).expect("Bytecode 1 too small for TLSH");
-    let fp2 = Fingerprint::from_bytecode(&bytecode2).expect("Bytecode 2 too small for TLSH");
+    let fp1 =
+        BytecodeFingerprint::from_bytecode(&bytecode1).expect("Bytecode 1 too small for TLSH");
+    let fp2 =
+        BytecodeFingerprint::from_bytecode(&bytecode2).expect("Bytecode 2 too small for TLSH");
 
     println!("\nTLSH hash 1: {}", fp1.hash_hex());
     println!("TLSH hash 2: {}", fp2.hash_hex());
 
-    let diff = fp1.diff(&fp2);
-    let similarity = fp1.similarity(&fp2);
+    let distance = fp1.distance(&fp2);
+    let similarity = fp1.compare(&fp2);
 
-    println!("\nTLSH diff score: {}", diff);
+    println!("\nDistance score: {}", distance);
     println!("\nInterpretation:");
     println!("  0       = identical");
     println!("  1-30    = very similar (same contract, different immutables)");

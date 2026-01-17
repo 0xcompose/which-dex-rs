@@ -52,16 +52,19 @@ pub enum FingerprintError {
     InvalidBytecode,
 }
 
-/// Bytecode fingerprint for comparison
-pub struct Fingerprint {
+/// Fuzzy fingerprint for bytecode similarity comparison
+///
+/// Uses TLSH (Trend Micro Locality Sensitive Hash) to enable detection of
+/// similar-but-not-identical contracts (e.g., same protocol, different immutables).
+pub struct BytecodeFingerprint {
     tlsh: TlshDefault,
     original_size: usize,
     normalized_size: usize,
 }
 
-impl std::fmt::Debug for Fingerprint {
+impl std::fmt::Debug for BytecodeFingerprint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Fingerprint")
+        f.debug_struct("BytecodeFingerprint")
             .field("hash", &self.hash_hex())
             .field("original_size", &self.original_size)
             .field("normalized_size", &self.normalized_size)
@@ -69,7 +72,7 @@ impl std::fmt::Debug for Fingerprint {
     }
 }
 
-impl Fingerprint {
+impl BytecodeFingerprint {
     /// Create a fingerprint from raw bytecode
     pub fn from_bytecode(bytecode: &[u8]) -> Result<Self, FingerprintError> {
         if bytecode.len() < 50 {
@@ -111,15 +114,21 @@ impl Fingerprint {
         self.normalized_size
     }
 
-    /// Compare with another fingerprint, returns diff score
+    /// Calculate distance score between two fingerprints
+    ///
     /// Lower score = more similar (0 = identical)
-    pub fn diff(&self, other: &Self) -> i32 {
+    /// Typical ranges:
+    /// - 0: Identical
+    /// - 1-30: Same contract, different immutables
+    /// - 31-100: Same protocol family/fork
+    /// - 100+: Different contracts
+    pub fn distance(&self, other: &Self) -> i32 {
         self.tlsh.diff(&other.tlsh, true)
     }
 
     /// Compare and return similarity classification
-    pub fn similarity(&self, other: &Self) -> Similarity {
-        Similarity::from_diff(self.diff(other))
+    pub fn compare(&self, other: &Self) -> Similarity {
+        Similarity::from_diff(self.distance(other))
     }
 }
 

@@ -1,4 +1,4 @@
-use which_dex_rs::Fingerprint;
+use which_dex_rs::BytecodeFingerprint;
 
 fn main() {
     println!("which-dex-rs - DEX pool identifier");
@@ -6,7 +6,7 @@ fn main() {
 
     // Example usage
     let example_bytecode = vec![0x60; 100]; // Dummy bytecode
-    match Fingerprint::from_bytecode(&example_bytecode) {
+    match BytecodeFingerprint::from_bytecode(&example_bytecode) {
         Ok(fp) => println!("Fingerprint hash: {}", fp.hash_hex()),
         Err(e) => println!("Error: {}", e),
     }
