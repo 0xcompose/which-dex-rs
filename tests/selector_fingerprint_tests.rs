@@ -88,3 +88,17 @@ fn test_protocol_categories() {
     assert!(identify_protocol(&v3).is_v3_style());
     assert!(identify_protocol(&algebra).is_v3_style());
 }
+
+#[test]
+fn test_identify_story_chain_storyhunt_pool() {
+    let bytecode = load_fixture("story_storyhunt_pool.hex");
+    let protocol = identify_protocol(&bytecode);
+    assert_eq!(protocol, DexProtocol::UniswapV3);
+}
+
+#[test]
+fn test_identify_story_chain_univ3_fork_pool() {
+    let bytecode = load_fixture("story_univ3_fork_pool.hex");
+    let protocol = identify_protocol(&bytecode);
+    assert_eq!(protocol, DexProtocol::UniswapV3);
+}

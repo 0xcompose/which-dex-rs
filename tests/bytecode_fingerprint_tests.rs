@@ -160,3 +160,23 @@ fn test_fingerprint_deterministic() {
     assert_eq!(fp1.hash_hex(), fp2.hash_hex());
     assert_eq!(fp1.distance(&fp2), 0);
 }
+
+/// Story chain: two UniV3-fork pools should be at least in the same family after normalization
+#[test]
+fn test_story_chain_univ3_forks_same_family() {
+    let a = load_fixture("story_storyhunt_pool.hex");
+    let b = load_fixture("story_univ3_fork_pool.hex");
+
+    let fp_a = BytecodeFingerprint::from_bytecode(&a).unwrap();
+    let fp_b = BytecodeFingerprint::from_bytecode(&b).unwrap();
+
+    let distance = fp_a.distance(&fp_b);
+    let similarity = fp_a.compare(&fp_b);
+
+    assert!(
+        similarity.is_same_family(),
+        "Expected same-family similarity, got {:?} (distance {})",
+        similarity,
+        distance
+    );
+}
