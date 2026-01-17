@@ -3,7 +3,7 @@
 //! These tests use real DEX pool bytecodes fetched from mainnet to verify
 //! that TLSH fingerprinting correctly identifies protocol families.
 
-use which_dex_rs::{BytecodeFingerprint, Similarity};
+use which_dex::{BytecodeFingerprint, Similarity};
 
 fn load_fixture(name: &str) -> Vec<u8> {
     let path = format!("tests/fixtures/{}", name);

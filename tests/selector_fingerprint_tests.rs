@@ -2,7 +2,7 @@
 //!
 //! These tests use real DEX pool bytecodes to verify protocol detection.
 
-use which_dex_rs::{identify_protocol, DexProtocol};
+use which_dex::{identify_protocol, DexProtocol};
 
 fn load_fixture(name: &str) -> Vec<u8> {
     let path = format!("tests/fixtures/{}", name);

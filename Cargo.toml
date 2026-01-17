@@ -1,5 +1,5 @@
 [package]
-name = "which-dex-rs"
+name = "which-dex"
 version = "0.1.0"
 edition = "2021"
 

@@ -10,7 +10,7 @@
 
 use std::env;
 use std::fs;
-use which_dex_rs::{BytecodeFingerprint, Similarity};
+use which_dex::{BytecodeFingerprint, Similarity};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
