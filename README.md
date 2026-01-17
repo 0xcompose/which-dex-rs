@@ -10,7 +10,7 @@ Build and run:
 cargo run -- analyze --rpc-url <RPC_URL> --address <0xADDRESS>
 ```
 
-JSON output (JSON on **stdout**, human-readable summary on **stderr**):
+JSON output (JSON only, on **stdout**):
 
 ```bash
 cargo run -- analyze --rpc-url <RPC_URL> --address <0xADDRESS> --json

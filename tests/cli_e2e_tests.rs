@@ -29,7 +29,13 @@ fn test_e2e_fuse_algebra_pool_is_detected() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    // JSON is on stdout, human-readable output is on stderr.
+    assert!(
+        output.stderr.is_empty(),
+        "expected no stderr output in --json mode, got stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // JSON is on stdout.
     let v: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout is valid JSON");
 

@@ -65,7 +65,6 @@ async fn run_analyze(
             "{}",
             serde_json::to_string(&report).expect("serialize report")
         );
-        eprint_human(&report);
     } else {
         print_human(&report);
     }
@@ -81,10 +80,6 @@ fn init_tracing(verbose: bool) {
 
 fn print_human(report: &AnalyzeReport) {
     write_human(&mut std::io::stdout(), report);
-}
-
-fn eprint_human(report: &AnalyzeReport) {
-    write_human(&mut std::io::stderr(), report);
 }
 
 fn write_human<W: std::io::Write>(out: &mut W, report: &AnalyzeReport) {
