@@ -1,3 +1,3 @@
-pub mod fingerprint;
+pub mod bytecode_fingerprint;
 
-pub use fingerprint::{BytecodeFingerprint, FingerprintError, Similarity};
+pub use bytecode_fingerprint::{BytecodeFingerprint, FingerprintError, Similarity};
