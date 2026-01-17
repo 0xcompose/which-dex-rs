@@ -8,7 +8,6 @@
 use std::process::Command;
 
 #[test]
-#[ignore = "e2e test requires network access and a working Fuse RPC"]
 fn test_e2e_fuse_algebra_pool_is_detected() {
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("which-dex"));
 
