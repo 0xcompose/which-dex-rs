@@ -1,7 +1,16 @@
 [package]
 name = "which-dex-rs"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-alloy-rs = "0.2.1"
+alloy = { version = "0.8", features = ["full"] }
+tlsh2 = { version = "0.3", features = ["diff"] }
+hex = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2"
+
+[[example]]
+name = "tlsh_compare"
+path = "examples/tlsh_compare.rs"
