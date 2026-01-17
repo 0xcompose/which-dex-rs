@@ -163,11 +163,7 @@ static FINGERPRINTS: &[ProtocolFingerprint] = &[
             selectors::PLUGIN,
             selectors::GET_FEE,
         ],
-        forbidden: &[
-            selectors::SLOT0,
-            selectors::FEE,
-            selectors::DATA_STORAGE_OPERATOR,
-        ],
+        forbidden: &[selectors::SLOT0, selectors::DATA_STORAGE_OPERATOR],
         optional: &[selectors::COMMUNITY_VAULT],
     },
     // Algebra V1.9
@@ -181,7 +177,7 @@ static FINGERPRINTS: &[ProtocolFingerprint] = &[
             selectors::LIQUIDITY,
             selectors::PLUGIN,
         ],
-        forbidden: &[selectors::SLOT0, selectors::FEE, selectors::GET_FEE],
+        forbidden: &[selectors::SLOT0, selectors::GET_FEE],
         optional: &[selectors::DATA_STORAGE_OPERATOR],
     },
     // Algebra legacy v1.x (pre-plugin)
@@ -195,7 +191,7 @@ static FINGERPRINTS: &[ProtocolFingerprint] = &[
             selectors::LIQUIDITY,
             selectors::DATA_STORAGE_OPERATOR,
         ],
-        forbidden: &[selectors::SLOT0, selectors::FEE, selectors::PLUGIN],
+        forbidden: &[selectors::SLOT0, selectors::PLUGIN],
         optional: &[selectors::GET_INNER_CUMULATIVES],
     },
     // Uniswap V3
@@ -367,5 +363,22 @@ mod tests {
         assert!(DexProtocol::UniswapV3.is_v3_style());
         assert!(DexProtocol::AlgebraLegacyV1.is_v3_style());
         assert!(!DexProtocol::UniswapV2.is_v3_style());
+    }
+
+    #[test]
+    fn test_identify_algebra_with_fee_selector() {
+        // Some Algebra deployments expose fee() in addition to globalState()/plugin().
+        // Ensure we still classify them as Algebra (and not Unknown).
+        let mut bytecode = Vec::new();
+        bytecode.extend_from_slice(selectors::TOKEN0.as_bytes());
+        bytecode.extend_from_slice(selectors::TOKEN1.as_bytes());
+        bytecode.extend_from_slice(selectors::GLOBAL_STATE.as_bytes());
+        bytecode.extend_from_slice(selectors::TICK_SPACING.as_bytes());
+        bytecode.extend_from_slice(selectors::LIQUIDITY.as_bytes());
+        bytecode.extend_from_slice(selectors::PLUGIN.as_bytes());
+        bytecode.extend_from_slice(selectors::FEE.as_bytes());
+
+        let protocol = identify_protocol(&bytecode);
+        assert_eq!(protocol, DexProtocol::AlgebraLegacyV1_9Plus);
     }
 }
