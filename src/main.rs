@@ -83,7 +83,6 @@ fn print_human(report: &AnalyzeReport) {
 }
 
 fn write_human<W: std::io::Write>(out: &mut W, report: &AnalyzeReport) {
-    let _ = writeln!(out, "rpc_url: {}", report.rpc_url);
     let _ = writeln!(out, "address: {}", report.address);
 
     if report.is_eip1167_proxy {
@@ -96,7 +95,6 @@ fn write_human<W: std::io::Write>(out: &mut W, report: &AnalyzeReport) {
     }
 
     let _ = writeln!(out, "");
-    let _ = writeln!(out, "analysis_address: {}", report.analysis.address);
     let _ = writeln!(out, "code_size: {}", report.analysis.code_size);
     let _ = writeln!(out, "protocol: {}", report.analysis.protocol);
     let _ = writeln!(out, "is_pool_likely: {}", report.analysis.is_pool_likely);
@@ -110,14 +108,6 @@ fn write_human<W: std::io::Write>(out: &mut W, report: &AnalyzeReport) {
                 }
             }
         }
-    }
-
-    if let Some(fp) = &report.analysis.fingerprint {
-        let _ = writeln!(out, "fingerprint_hash: {}", fp.hash_hex);
-        let _ = writeln!(out, "fingerprint_original_size: {}", fp.original_size);
-        let _ = writeln!(out, "fingerprint_normalized_size: {}", fp.normalized_size);
-    } else if let Some(err) = &report.analysis.fingerprint_error {
-        let _ = writeln!(out, "fingerprint_error: {err}");
     }
 
     if let Some(proxy) = &report.proxy_analysis {
