@@ -46,7 +46,6 @@ pub struct FingerprintReport {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BytecodeAnalysis {
-    pub address: String,
     pub code_size: usize,
 
     pub protocol: String,
@@ -126,7 +125,7 @@ fn decide_protocol(bytecode: &[u8]) -> (DexProtocol, Option<Vec<ProtocolCandidat
     }
 }
 
-pub fn analyze_bytecode(address: Address, bytecode: &[u8]) -> BytecodeAnalysis {
+pub fn analyze_bytecode(bytecode: &[u8]) -> BytecodeAnalysis {
     let (protocol, candidates) = decide_protocol(bytecode);
     let is_pool_likely = protocol != DexProtocol::Unknown;
 
@@ -143,7 +142,6 @@ pub fn analyze_bytecode(address: Address, bytecode: &[u8]) -> BytecodeAnalysis {
     };
 
     BytecodeAnalysis {
-        address: format!("{address:#x}"),
         code_size: bytecode.len(),
         protocol: dex_protocol_name(protocol).to_string(),
         protocol_candidates: candidates,
@@ -253,8 +251,8 @@ pub async fn analyze_address_with_cache(
             return Err(AnalyzeError::NoDeployedBytecode);
         }
 
-        let analysis = analyze_bytecode(impl_address, &impl_bytecode);
-        let proxy_analysis = analyze_bytecode(address, &bytecode);
+        let analysis = analyze_bytecode(&impl_bytecode);
+        let proxy_analysis = analyze_bytecode(&bytecode);
 
         return Ok(AnalyzeReport {
             rpc_url: rpc_url.to_string(),
@@ -282,7 +280,7 @@ pub async fn analyze_address_with_cache(
         address: format!("{address:#x}"),
         is_eip1167_proxy: false,
         implementation_address: None,
-        analysis: analyze_bytecode(address, &bytecode),
+        analysis: analyze_bytecode(&bytecode),
         proxy_analysis: None,
     })
 }

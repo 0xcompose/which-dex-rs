@@ -17,8 +17,8 @@ struct Args {
     /// RPC URL (e.g. https://...)
     rpc_url: String,
     /// Emit JSON to stdout (human-readable output goes to stderr)
-    #[arg(long)]
-    json: bool,
+    // #[arg(long)]
+    // json: bool,
     /// Enable verbose debug logs (tracing)
     #[arg(long)]
     verbose: bool,
@@ -47,7 +47,7 @@ async fn main() {
     let result = run_analyze(
         &args.rpc_url,
         &args.address,
-        args.json,
+        // args.json,
         args.verbose,
         args.no_cache,
         args.cache_dir,
@@ -65,7 +65,7 @@ async fn main() {
 async fn run_analyze(
     rpc_url: &str,
     address: &str,
-    json: bool,
+    // json: bool,
     verbose: bool,
     no_cache: bool,
     cache_dir: Option<String>,
@@ -92,14 +92,14 @@ async fn run_analyze(
 
     let report = analyze_address_with_cache(rpc_url, addr, Some(cache_cfg)).await?;
 
-    if json {
-        println!(
-            "{}",
-            serde_json::to_string(&report).expect("serialize report")
-        );
-    } else {
-        print_human(&report);
-    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&report).expect("serialize report")
+    );
+    // if json {
+    // } else {
+    //     print_human(&report);
+    // }
 
     Ok(())
 }
@@ -108,45 +108,4 @@ fn init_tracing(verbose: bool) {
     let level = if verbose { "debug" } else { "info" };
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
     let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
-}
-
-fn print_human(report: &AnalyzeReport) {
-    write_human(&mut std::io::stdout(), report);
-}
-
-fn write_human<W: std::io::Write>(out: &mut W, report: &AnalyzeReport) {
-    let _ = writeln!(out, "address: {}", report.address);
-
-    if report.is_eip1167_proxy {
-        let _ = writeln!(out, "eip1167_proxy: true");
-        if let Some(impl_addr) = &report.implementation_address {
-            let _ = writeln!(out, "implementation_address: {impl_addr}");
-        }
-    } else {
-        let _ = writeln!(out, "eip1167_proxy: false");
-    }
-
-    let _ = writeln!(out, "");
-    let _ = writeln!(out, "code_size: {}", report.analysis.code_size);
-    let _ = writeln!(out, "protocol: {}", report.analysis.protocol);
-    let _ = writeln!(out, "is_pool_likely: {}", report.analysis.is_pool_likely);
-
-    if report.analysis.protocol == "Unknown" {
-        if let Some(cands) = &report.analysis.protocol_candidates {
-            if !cands.is_empty() {
-                let _ = writeln!(out, "protocol_candidates:");
-                for c in cands {
-                    let _ = writeln!(out, "  - {} (confidence {})", c.protocol, c.confidence);
-                }
-            }
-        }
-    }
-
-    if let Some(proxy) = &report.proxy_analysis {
-        let _ = writeln!(out, "");
-        let _ = writeln!(out, "proxy_bytecode_analysis:");
-        let _ = writeln!(out, "  address: {}", proxy.address);
-        let _ = writeln!(out, "  code_size: {}", proxy.code_size);
-        let _ = writeln!(out, "  protocol: {}", proxy.protocol);
-    }
 }
