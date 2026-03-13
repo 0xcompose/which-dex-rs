@@ -1,9 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
-use which_dex::analyze::{
-    analyze_address_with_cache, parse_address_hex, AnalyzeError, AnalyzeReport,
-};
+use which_dex::analyze::{analyze_address_with_cache, parse_address_hex, AnalyzeError};
 use which_dex::cache::{parse_duration, CacheConfig};
 use which_dex::validate_rpc_url;
 
