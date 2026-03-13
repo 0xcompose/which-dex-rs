@@ -1,12 +1,15 @@
+use alloy::network::Network;
 use alloy::primitives::Address;
 use alloy::providers::{Provider, ProviderBuilder};
 use alloy::transports::http::reqwest::Url as AlloyUrl;
+use alloy::transports::Transport;
 use serde::Serialize;
 use thiserror::Error;
 use tracing::debug;
 use url::Url;
 
 use crate::bytecode_fingerprint::{extract_eip1167_impl, is_eip1167_proxy, BytecodeFingerprint};
+use crate::cache::{BytecodeCache, CacheConfig};
 use crate::selector_fingerprint::selectors;
 use crate::selector_fingerprint::{identify_protocols, DexProtocol};
 
@@ -23,6 +26,9 @@ pub enum AnalyzeError {
 
     #[error("rpc error: {0}")]
     Rpc(String),
+
+    #[error("invalid cache ttl: {0}")]
+    InvalidCacheTtl(String),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -155,26 +161,82 @@ pub fn proxy_implementation_address(bytecode: &[u8]) -> Option<Address> {
     Some(Address::from(impl_bytes))
 }
 
-async fn fetch_code(rpc_url: &str, address: Address) -> Result<Vec<u8>, AnalyzeError> {
-    let url: AlloyUrl = rpc_url.parse().map_err(|_| AnalyzeError::InvalidRpcUrl)?;
-    let provider = ProviderBuilder::new().on_http(url);
+async fn fetch_code_cached<P, T, N>(
+    provider: &P,
+    cache: Option<&BytecodeCache>,
+    chain_id: u64,
+    address: Address,
+) -> Result<Vec<u8>, AnalyzeError>
+where
+    P: Provider<T, N>,
+    T: Transport + Clone,
+    N: Network,
+{
+    if let Some(cache) = cache {
+        if let Ok(Some(bytes)) = cache.get(chain_id, address) {
+            return Ok(bytes);
+        }
+    }
 
     let bytes = provider
         .get_code_at(address)
         .await
         .map_err(|e| AnalyzeError::Rpc(e.to_string()))?;
 
-    debug!(address = %format!("{address:#x}"), code_size = bytes.len(), "fetched_code");
-    Ok(bytes.to_vec())
+    debug!(
+        chain_id,
+        address = %format!("{address:#x}"),
+        code_size = bytes.len(),
+        "fetched_code"
+    );
+
+    let out = bytes.to_vec();
+    if let Some(cache) = cache {
+        let _ = cache.put(chain_id, address, &out);
+    }
+    Ok(out)
+}
+
+fn resolve_cache(rpc_cache: Option<CacheConfig>) -> Option<BytecodeCache> {
+    let cfg = rpc_cache.unwrap_or_default();
+    if !cfg.enabled {
+        return None;
+    }
+    Some(BytecodeCache::new(cfg))
 }
 
 pub async fn analyze_address(
     rpc_url: &str,
     address: Address,
 ) -> Result<AnalyzeReport, AnalyzeError> {
+    analyze_address_with_cache(rpc_url, address, None).await
+}
+
+pub async fn analyze_address_with_cache(
+    rpc_url: &str,
+    address: Address,
+    cache_cfg: Option<CacheConfig>,
+) -> Result<AnalyzeReport, AnalyzeError> {
     validate_rpc_url(rpc_url)?;
 
-    let bytecode = fetch_code(rpc_url, address).await?;
+    let url: AlloyUrl = rpc_url.parse().map_err(|_| AnalyzeError::InvalidRpcUrl)?;
+    let provider = ProviderBuilder::new().on_http(url);
+
+    let chain_id: u64 = provider
+        .get_chain_id()
+        .await
+        .map_err(|e| AnalyzeError::Rpc(e.to_string()))?
+        .try_into()
+        .unwrap_or(0u64);
+
+    let cache = resolve_cache(cache_cfg);
+    let cache_ref = cache.as_ref();
+
+    if let Some(cache) = cache_ref {
+        let _ = cache.cleanup();
+    }
+
+    let bytecode = fetch_code_cached(&provider, cache_ref, chain_id, address).await?;
     if bytecode.is_empty() {
         return Err(AnalyzeError::NoDeployedBytecode);
     }
@@ -186,7 +248,7 @@ pub async fn analyze_address(
             implementation = %format!("{impl_address:#x}"),
             "eip1167_proxy_resolved"
         );
-        let impl_bytecode = fetch_code(rpc_url, impl_address).await?;
+        let impl_bytecode = fetch_code_cached(&provider, cache_ref, chain_id, impl_address).await?;
         if impl_bytecode.is_empty() {
             return Err(AnalyzeError::NoDeployedBytecode);
         }
