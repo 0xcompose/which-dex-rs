@@ -1,46 +1,60 @@
-use clap::{Parser, Subcommand};
+use clap::Parser;
+use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
-use which_dex::analyze::{analyze_address, parse_address_hex, AnalyzeError, AnalyzeReport};
+use which_dex::analyze::{
+    analyze_address_with_cache, parse_address_hex, AnalyzeError, AnalyzeReport,
+};
+use which_dex::cache::{parse_duration, CacheConfig};
 use which_dex::validate_rpc_url;
 
 #[derive(Debug, Parser)]
 #[command(name = "which-dex", about = "DEX pool identifier", version)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Debug, Subcommand)]
-enum Commands {
+struct Args {
     /// Fetch bytecode via RPC and identify whether the address looks like a DEX pool + which protocol.
-    Analyze {
-        /// RPC URL (e.g. https://...)
-        #[arg(long)]
-        rpc_url: String,
-        /// Contract address (0x-prefixed hex)
-        #[arg(long)]
-        address: String,
-        /// Emit JSON to stdout (human-readable output goes to stderr)
-        #[arg(long)]
-        json: bool,
-        /// Enable verbose debug logs (tracing)
-        #[arg(long)]
-        verbose: bool,
-    },
+    /// Contract address (0x-prefixed hex)
+    address: String,
+
+    /// RPC URL (e.g. https://...)
+    rpc_url: String,
+    /// Emit JSON to stdout (human-readable output goes to stderr)
+    #[arg(long)]
+    json: bool,
+    /// Enable verbose debug logs (tracing)
+    #[arg(long)]
+    verbose: bool,
+
+    /// Disable disk bytecode cache (read + write)
+    #[arg(long, default_value_t = false)]
+    no_cache: bool,
+
+    /// Override cache directory (default: $XDG_CACHE_HOME/which-dex or ~/.cache/which-dex)
+    #[arg(long)]
+    cache_dir: Option<String>,
+
+    /// Override cache TTL (e.g. 30m, 12h, 7d)
+    #[arg(long)]
+    cache_ttl: Option<String>,
+
+    /// Override cache max size (MB)
+    #[arg(long)]
+    cache_max_mb: Option<u64>,
 }
 
 #[tokio::main]
 async fn main() {
-    let cli = Cli::parse();
+    let args = Args::parse();
 
-    let result = match cli.command {
-        Commands::Analyze {
-            rpc_url,
-            address,
-            json,
-            verbose,
-        } => run_analyze(&rpc_url, &address, json, verbose).await,
-    };
+    let result = run_analyze(
+        &args.rpc_url,
+        &args.address,
+        args.json,
+        args.verbose,
+        args.no_cache,
+        args.cache_dir,
+        args.cache_ttl,
+        args.cache_max_mb,
+    )
+    .await;
 
     if let Err(e) = result {
         eprintln!("error: {e}");
@@ -53,12 +67,30 @@ async fn run_analyze(
     address: &str,
     json: bool,
     verbose: bool,
+    no_cache: bool,
+    cache_dir: Option<String>,
+    cache_ttl: Option<String>,
+    cache_max_mb: Option<u64>,
 ) -> Result<(), AnalyzeError> {
     init_tracing(verbose);
     validate_rpc_url(rpc_url)?;
     let addr = parse_address_hex(address)?;
 
-    let report = analyze_address(rpc_url, addr).await?;
+    let mut cache_cfg = CacheConfig::default();
+    if no_cache {
+        cache_cfg.enabled = false;
+    }
+    if let Some(dir) = cache_dir {
+        cache_cfg.dir = PathBuf::from(dir);
+    }
+    if let Some(ttl) = cache_ttl {
+        cache_cfg.ttl = parse_duration(&ttl).map_err(AnalyzeError::InvalidCacheTtl)?;
+    }
+    if let Some(max_mb) = cache_max_mb {
+        cache_cfg.max_bytes = max_mb.saturating_mul(1024).saturating_mul(1024);
+    }
+
+    let report = analyze_address_with_cache(rpc_url, addr, Some(cache_cfg)).await?;
 
     if json {
         println!(
