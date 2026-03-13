@@ -1,7 +1,7 @@
 .PHONY: install uninstall check test help build release clean
 
 BIN_NAME := which-dex
-INSTALL_PATH := /usr/local/bin/$(BIN_NAME)
+INSTALL_PATH := /Users/slava/Development/blockchain/arb/bin/$(BIN_NAME)
 BIN_PATH := $(CURDIR)/target/release/$(BIN_NAME)
 
 help:
